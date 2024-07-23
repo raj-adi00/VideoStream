@@ -21,5 +21,4 @@ const uploadOnCloudinary = async (localFilePath) => {
         return "Couldn't Upload file"
     }
 }
-
 export { uploadOnCloudinary }
