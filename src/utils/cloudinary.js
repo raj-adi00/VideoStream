@@ -21,4 +21,12 @@ const uploadOnCloudinary = async (localFilePath) => {
         return "Couldn't Upload file"
     }
 }
-export { uploadOnCloudinary }
+const deleteFromCloudinary = async (oldurl) => {
+    try {
+        if (!oldurl) return "Invalid url"
+        const res = await cloudinary.uploader.destroy(oldurl.substring(oldurl.lastIndexOf('/')+1, oldurl.lastIndexOf('.')));
+    } catch {
+        console.log("coluldn't delte file")
+    }
+}
+export { uploadOnCloudinary, deleteFromCloudinary }
