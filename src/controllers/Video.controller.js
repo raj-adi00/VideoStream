@@ -105,6 +105,9 @@ const getAllVideo = asyncHandler(async (req, res) => {
                 thumbnail_public_id: 1,
                 createdAt: 1,
                 updatedAt: 1,
+                "channel_owner.fullname": { $arrayElemAt: ["$channel_owner.fullname", 0] },
+                "channel_owner.email": { $arrayElemAt: ["$channel_owner.email", 0] },
+                "channel_owner.avatar": { $arrayElemAt: ["$channel_owner.avatar", 0] },
             }
         }
     ]);
