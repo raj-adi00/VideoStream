@@ -5,6 +5,7 @@ import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js
 import { Video } from "../models/video.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import fs from "fs"
+import { serialize } from "v8";
 
 
 const PublsihVideo = asyncHandler(async (req, res) => {
@@ -74,5 +75,55 @@ const PublsihVideo = asyncHandler(async (req, res) => {
 })
 
 
+const getAllVideo = asyncHandler(async (req, res) => {
+    const lastId = req.query.searchAfter;  // The _id of the last document from the previous page, passed as a query parameter   GET /api/videos?searchAfter=lastDocumentId
+    const limit = 10;
 
-export { PublsihVideo }
+    const matchStage = lastId ? { _id: { $gt: new mongoose.Types.ObjectId(lastId) } } : {};
+    const allvideos = await Video.aggregate([
+        { $match: matchStage },
+        {
+            $lookup: {
+                from: "users",
+                localField: "owner",
+                foreignField: "_id",
+                as: "channel_owner"
+            }
+        },
+        { $limit: limit },
+        {
+            $project: {
+                videoFile: 1,
+                thumbnail: 1,
+                title: 1,
+                description: 1,
+                duration: 1,
+                views: 1,
+                isPublished: 1,
+                owner: 1,
+                video_public_id: 1,
+                thumbnail_public_id: 1,
+                createdAt: 1,
+                updatedAt: 1,
+            }
+        }
+    ]);
+
+    if (allvideos) {
+        const searchAfter = allvideos.length > 0 ? allvideos[allvideos.length - 1]._id : null;
+        if (searchAfter)
+            res
+                .status(200)
+                .json(new ApiResponse(200, { videos: allvideos, searchAfter }, "Videos fetched successfully"));
+        else
+            throw new ApiError(400, "Not available")
+    } else {
+        throw new ApiError(500, "Error Fetching the videos");
+    }
+});
+
+
+
+
+
+export { PublsihVideo, getAllVideo }
