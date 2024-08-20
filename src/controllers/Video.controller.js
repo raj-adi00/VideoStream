@@ -6,6 +6,7 @@ import { Video } from "../models/video.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import fs from "fs"
 import { serialize } from "v8";
+import { User } from "../models/user.model.js";
 
 
 const PublsihVideo = asyncHandler(async (req, res) => {
@@ -115,7 +116,7 @@ const getAllVideo = asyncHandler(async (req, res) => {
     if (allvideos) {
         const searchAfter = allvideos.length > 0 ? allvideos[allvideos.length - 1]._id : null;
         if (searchAfter)
-            res
+            return res
                 .status(200)
                 .json(new ApiResponse(200, { videos: allvideos, searchAfter }, "Videos fetched successfully"));
         else
@@ -125,8 +126,86 @@ const getAllVideo = asyncHandler(async (req, res) => {
     }
 });
 
+const getVideoById = asyncHandler(async (req, res) => {
+    const videoid = new mongoose.Types.ObjectId(req?.params?.videoid)
+    if (!videoid) {
+        throw new ApiError(400, "Invalid video id")
+    }
+    const currentVideo = await Video.findById(videoid);
+    if (!currentVideo) {
+        throw new ApiError(400, "No such videoId exist")
+    }
+    const owner = await User.findById(currentVideo.owner).select("-password -watchHistory -refreshToken")
+    if (!owner) {
+        throw new ApiError(500, "something went wrong")
+    }
+    return res
+        .status(200)
+        .json(new ApiResponse(200, { currentVideo, owner }, "Video got successfully"))
+});
+
+const deleteVideo = asyncHandler(async (req, res) => {
+    const user = req?.user;
+    if (!user) {
+        throw new ApiError(400, "Unauthorised access!! Please Login")
+    }
+    const videoid = new mongoose.Types.ObjectId(req?.params?.videoid)
+    if (!videoid) {
+        throw new ApiError(500, "Something went Wrong")
+    }
+    const currentVideo = await Video.findById(videoid);
+    if (!user._id.equals(currentVideo.owner)) {
+        throw new ApiError(400, "Unauthorised access!!")
+    }
+    const deletevideo = await Video.deleteOne(videoid)
+    if (!deletevideo) {
+        throw new ApiError(500, "Couldn't delete Video please try again")
+    }
+    return res
+        .status(200)
+        .json(new ApiResponse(200, {}, "Video deleted successfully"))
+})
+
+// const upadateVideo = asyncHandler(async (req, res) => {
+//     const user = req?.user;
+//     console.log(user)
+//     if (!user) {
+//         throw new ApiError(400, "Unauthorised access!! Please Login")
+//     }
+//     // if (!req?.body?.title && !req?.body?.description && !req?.file?.path) {
+//     //     console.log(req.body.title)
+//     //     throw new ApiError(400, "Provide the fields to update")
+//     // }
+//     const videoid = new mongoose.Types.ObjectId(req?.params?.videoid)
+//     const currentVideo = await Video.findById(videoid)
+//     if (!currentVideo) {
+//         throw new ApiError(400, "No such video exist")
+//     }
+//     if (!user._id.equals(currentVideo.owner)) {
+//         throw new ApiError(400, "Unauthorised access!!")
+//     }
+//     const title = req?.body?.title || currentVideo.title
+//     const description = req?.body?.description || currentVideo.description
+//     // const thumbnailLocalPath = req?.file?.path
+//     // if (!thumbnailLocalPath) {
+//     //     thumbnail = currentVideo.thumbnail
+//     // } else {
+//     //     const thumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+//     //     if (!thumbnail) {
+//     //         throw new ApiError(500, "Error while uploading cloudinary file on cloudinary")
+//     //     }
+//     //     currentVideo.thumbnail = thumbnail
+//     // }
+//     currentVideo.title = title
+//     currentVideo.description = description
+//     const updatedVideo = await currentVideo.save({ validateBeforeSave: false })
+//     if (!updatedVideo) {
+//         throw new ApiError(500, "Couldn't update the video")
+//     }
+//     return res
+//         .status(200)
+//         .json(new ApiResponse(200, updatedVideo, "Video updated successfully"))
+// })
 
 
-
-
-export { PublsihVideo, getAllVideo }
+export { PublsihVideo, getAllVideo, getVideoById, deleteVideo }
