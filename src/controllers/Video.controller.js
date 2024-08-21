@@ -166,46 +166,62 @@ const deleteVideo = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, {}, "Video deleted successfully"))
 })
 
-// const upadateVideo = asyncHandler(async (req, res) => {
-//     const user = req?.user;
-//     console.log(user)
-//     if (!user) {
-//         throw new ApiError(400, "Unauthorised access!! Please Login")
-//     }
-//     // if (!req?.body?.title && !req?.body?.description && !req?.file?.path) {
-//     //     console.log(req.body.title)
-//     //     throw new ApiError(400, "Provide the fields to update")
-//     // }
-//     const videoid = new mongoose.Types.ObjectId(req?.params?.videoid)
-//     const currentVideo = await Video.findById(videoid)
-//     if (!currentVideo) {
-//         throw new ApiError(400, "No such video exist")
-//     }
-//     if (!user._id.equals(currentVideo.owner)) {
-//         throw new ApiError(400, "Unauthorised access!!")
-//     }
-//     const title = req?.body?.title || currentVideo.title
-//     const description = req?.body?.description || currentVideo.description
-//     // const thumbnailLocalPath = req?.file?.path
-//     // if (!thumbnailLocalPath) {
-//     //     thumbnail = currentVideo.thumbnail
-//     // } else {
-//     //     const thumbnail = await uploadOnCloudinary(thumbnailLocalPath)
-//     //     if (!thumbnail) {
-//     //         throw new ApiError(500, "Error while uploading cloudinary file on cloudinary")
-//     //     }
-//     //     currentVideo.thumbnail = thumbnail
-//     // }
-//     currentVideo.title = title
-//     currentVideo.description = description
-//     const updatedVideo = await currentVideo.save({ validateBeforeSave: false })
-//     if (!updatedVideo) {
-//         throw new ApiError(500, "Couldn't update the video")
-//     }
-//     return res
-//         .status(200)
-//         .json(new ApiResponse(200, updatedVideo, "Video updated successfully"))
-// })
+const updateVideoDetails = asyncHandler(async (req, res) => {
+    const user = req?.user;
+    let title = req.body.title;
+    let description = req.body?.description
+    if (!user) {
+        throw new ApiError(400, "Unauthorised Access")
+    }
+    const videoid = new mongoose.Types.ObjectId(req?.params?.videoid);
+    const currentVideo = await Video.findById(videoid);
+    if (!currentVideo.owner.equals(user._id)) {
+        throw new ApiError(400, "Only video owner can updae details")
+    }
+    // console.log(title)
+    if (!title && !description) {
+        throw new ApiError(400, "Please provide details")
+    }
+    if (!title)
+        title = currentVideo.title
+    if (!description)
+        description = currentVideo.description
+    const updatedDetails = await Video.findByIdAndUpdate(videoid, {
+        $set: {
+            title, description
+        },
+    }, { new: true }
+    )
+    if (!updatedDetails) {
+        throw new ApiError(500, "Something went wreong while updating document")
+    }
+    return res.
+        status(200)
+        .json(new ApiResponse(200, updatedDetails, "Details updated successfully"))
+})
 
 
-export { PublsihVideo, getAllVideo, getVideoById, deleteVideo }
+const togglePublishStatus = asyncHandler(async (req, res) => {
+    const user = req?.user;
+    if (!user) {
+        throw new ApiError(400, "Unauthorised Access")
+    }
+    const videoid = new mongoose.Types.ObjectId(req?.params?.videoid);
+    const currentVideo = await Video.findById(videoid);
+    if (!currentVideo.owner.equals(user._id)) {
+        throw new ApiError(400, "Only video owner can updae details")
+    }
+    const updateVideoDetails = await Video.findByIdAndUpdate(videoid,
+        {
+            $set: {
+                isPublished: !(currentVideo.isPublished)
+            }
+        }, { new: true })
+    if (!updateVideoDetails)
+        throw new ApiError(500, "Something went wrong while updating publish status")
+    return res
+        .status(200)
+        .json(new ApiResponse(200, updateVideoDetails, "Publish status updated successfully"))
+})
+
+export { PublsihVideo, getAllVideo, getVideoById, deleteVideo, updateVideoDetails, togglePublishStatus }
