@@ -123,17 +123,28 @@ const loginUser = asyncHandler(async (req, res) => {
     const { username, email, password } = req.body
 
     if (!username && !email) {
-        throw new ApiError(400, "Username or email is required")
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "Username or email is required"))
+    }
+    if (!password) {
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "Password is required"))
     }
     const user = await User.findOne({
         $or: [{ username }, { email }]
     })
     if (!user) {
-        throw new ApiError(404, "User doesn't exist")
+        return res
+            .status(404)
+            .json(new ApiResponse(404, {}, "User doesn't exist"))
     }
     const isPasswordValid = await user.isPasswordCorrect(password)
     if (!isPasswordValid) {
-        throw new ApiError(401, "Invalid user credentials")
+        return res
+            .status(401)
+            .json(new ApiResponse(401, {}, "Invalid user credentials"))
     }
     const { accesToken, refreshToken } = await generateAccessAndRefreshToken(user._id)
 
@@ -142,16 +153,21 @@ const loginUser = asyncHandler(async (req, res) => {
         httpOnly: true,
         secure: true
     }
-    return res.status(200).cookie("accessToken", accesToken, options).cookie("refreshToken", refreshToken, options)
-        .json(
-            new ApiResponse(
-                200,
-                {
-                    user: looggeInUser, accesToken, refreshToken
-                },
-                "User logged In successfully"
+    if (looggeInUser)
+        return res.status(200).cookie("accessToken", accesToken, options).cookie("refreshToken", refreshToken, options)
+            .json(
+                new ApiResponse(
+                    200,
+                    {
+                        user: looggeInUser, accesToken, refreshToken
+                    },
+                    "User logged In successfully"
+                )
             )
-        )
+    else
+        return res
+            .status(500)
+            .json(new ApiResponse(500, {}, "SOmething went wrong"))
 })
 
 const logoutUser = asyncHandler(async (req, res) => {
