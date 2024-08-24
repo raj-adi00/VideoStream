@@ -171,25 +171,38 @@ const loginUser = asyncHandler(async (req, res) => {
 })
 
 const logoutUser = asyncHandler(async (req, res) => {
-    await User.findByIdAndUpdate(
-        req.user._id,
-        {
-            $unset: {
-                refreshToken: 1
+    try {
+        const response = await User.findByIdAndUpdate(
+            req.user._id,
+            {
+                $unset: {
+                    refreshToken: 1
+                }
+            },
+            {
+                new: true
             }
-        },
-        {
-            new: true
+        )
+        const options = {
+            httpOnly: true,
+            secure: true
         }
-    )
-    const options = {
-        httpOnly: true,
-        secure: true
+        if (response) {
+            return res.status(200)
+                .clearCookie("accessToken", options)
+                .clearCookie("refreshToken", options)
+                .json(new ApiResponse(200, {}, "User logged out successfully"))
+        } else
+            return res.
+                status(500)
+                .json(new ApiResponse(500, {}, "Something went wrong while logging out"))
     }
-    return res.status(200)
-        .clearCookie("accessToken", options)
-        .clearCookie("refreshToken", options)
-        .json(new ApiResponse(200, {}, "User logged out successfully"))
+    catch (err) {
+        return res
+            .status(500)
+            .json(new ApiResponse(500, {}, "Something went wrong while logging out user"))
+    }
+
 })
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
