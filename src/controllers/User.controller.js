@@ -40,17 +40,26 @@ const registerUser = asyncHandler(async (req, res) => {
     //     throw new ApiError(400,"fullname is required")
     // }
     // console.log(req)
+    if (!req.files || !Array.isArray(req.files.avatar || req.files.length == 0))
+        return res
+            .status(401)
+            .json(new ApiResponse(401, {}, "All fields are required"))
     if (
         [fullname, email, username, password].some((field) =>
             field?.trim() === "")
     ) {
-        throw new ApiError(400, "All fields are required");
+        return res
+            .status(401)
+            .json(new ApiResponse(401, {}, "All fields are required"))
     }
     const existedUser = await User.findOne({
         $or: [{ username }, { email }]
     })
     if (existedUser) {
-        throw new ApiError(409, "User with email or username already exist");
+        return res
+            .status(409)
+            .json(new ApiResponse(409, {}, "User with email or username already exist"))
+        // throw new ApiError(409, "User with email or username already exist");
     }
     // const avatarLocalPath = req.files?.avatar[0]?.path
     let avatarLocalPath;
@@ -64,7 +73,9 @@ const registerUser = asyncHandler(async (req, res) => {
     }
     if (!avatarLocalPath) {
         fs.unlinkSync(coverImageLocalPath)
-        throw new ApiError(400, "Avatar file is required")
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "Avatar field is required"))
     }
     // console.log(avatarLocalPath)
     const avatar = await uploadOnCloudinary(avatarLocalPath);
@@ -72,7 +83,9 @@ const registerUser = asyncHandler(async (req, res) => {
     if (!avatar) {
         fs.unlinkSync(avatarLocalPath)
         fs.unlinkSync(coverImageLocalPath)
-        throw new ApiError(400, "Failed to upload Avatar file")
+        return res
+            .status(500)
+            .json(new ApiResponse(500, {}, "Failed to upload avatar file"))
     }
     // console.log(avatar)
     const user = await User.create({
@@ -90,7 +103,9 @@ const registerUser = asyncHandler(async (req, res) => {
     if (!createdUser) {
         fs.unlinkSync(avatarLocalPath)
         fs.unlinkSync(coverImageLocalPath)
-        throw new ApiError(500, "Something went Wrong while registering a user")
+        return res
+            .status(500)
+            .json(new ApiResponse(500, {}, "Something went wrong while registering the user"))
     }
     return res.status(201).json(
         new ApiResponse(200, createdUser, "USer registered successfully")
