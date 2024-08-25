@@ -79,8 +79,28 @@ const PublsihVideo = asyncHandler(async (req, res) => {
 const getAllVideo = asyncHandler(async (req, res) => {
     const lastId = req.query.searchAfter;  // The _id of the last document from the previous page, passed as a query parameter   GET /api/videos?searchAfter=lastDocumentId
     const limit = 10;
+    let { isPublished } = req.query
+    const userid = new mongoose.Types.ObjectId(req.query.username)
+    // console.log(req.query)
+    isPublished = isPublished === 'true'
+    console.log(typeof isPublished, isPublished)
+    let matchStage
+    if (isPublished)
+        matchStage = lastId
+            ? { _id: { $gt: new mongoose.Types.ObjectId(lastId) }, isPublished: isPublished }
+            : { isPublished: isPublished };
+    else
+    matchStage = lastId
+    ? { 
+        _id: { $gt: new mongoose.Types.ObjectId(lastId) },
+        $or: [{ owner: userid }, { isPublished: true }]
+      }
+    : { 
+        $or: [{ owner: userid }, { isPublished: true }] 
+      };
 
-    const matchStage = lastId ? { _id: { $gt: new mongoose.Types.ObjectId(lastId) } } : {};
+
+    console.log(await Video.findOne({$or:[{owner: userid},{isPublished:true}]}))
     const allvideos = await Video.aggregate([
         { $match: matchStage },
         {
@@ -113,7 +133,8 @@ const getAllVideo = asyncHandler(async (req, res) => {
             }
         }
     ]);
-
+    console.log("videos fetched succesfully")
+    // console.log(allvideos)
     if (allvideos) {
         const searchAfter = allvideos.length > 0 ? allvideos[allvideos.length - 1]._id : null;
         if (searchAfter)
@@ -121,9 +142,13 @@ const getAllVideo = asyncHandler(async (req, res) => {
                 .status(200)
                 .json(new ApiResponse(200, { videos: allvideos, searchAfter }, "Videos fetched successfully"));
         else
-            throw new ApiError(400, "Not available")
+            return res
+                .status(201)
+                .json(new ApiResponse(200, {}, "No more Videos Found"))
     } else {
-        throw new ApiError(500, "Error Fetching the videos");
+        return res
+            .status(500)
+            .json(new ApiResponse(500, {}, "Internal Error while fetching the Videos"))
     }
 });
 
