@@ -13,86 +13,109 @@ const PublsihVideo = asyncHandler(async (req, res) => {
     const user = req?.user;
     const description = req?.body?.description;
     const title = req?.body?.title;
-    const { isPublished } = req?.body
+    const { isPublished } = req?.body;
 
-    console.log(isPublished)
+    // Convert isPublished to a boolean explicitly
+    const isPublishedValue = isPublished === 'true' ? true : false;
+
+    console.log('Received isPublished:', isPublished);
+    console.log('Processed isPublishedValue:', isPublishedValue);
+
     if (!user) {
-        console.log("User Not Signed in to upload video")
+        console.log("User Not Signed in to upload video");
         return res
             .status(400)
-            .json(new ApiResponse(400, {}, "Unauthorised Access"))
+            .json(new ApiResponse(400, {}, "Unauthorised Access"));
     }
 
     if (!title || !description) {
-        console.log(title, description)
-        console.log("All fields are required")
+        console.log(title, description);
+        console.log("All fields are required");
         return res
             .status(400)
-            .json(new ApiResponse(400, {}, "All fields are required"))
+            .json(new ApiResponse(400, {}, "All fields are required"));
     }
+
     let VideoLocalPath;
-    // console.log(req.files)
-    if (req.files && Array.isArray(req.files.video) && req.files.video.length > 0)
+    if (req.files && Array.isArray(req.files.video) && req.files.video.length > 0) {
         VideoLocalPath = req.files.video[0].path;
+    }
+
     let thumbnailLocalPath;
-    if (req.files && Array.isArray(req.files.thumbnail) && req.files.thumbnail.length > 0)
+    if (req.files && Array.isArray(req.files.thumbnail) && req.files.thumbnail.length > 0) {
         thumbnailLocalPath = req.files.thumbnail[0].path;
+    }
+
     if (!VideoLocalPath) {
-        if (thumbnailLocalPath)
-            fs.unlinkSync(thumbnailLocalPath)
-        console.log("Video is required")
+        if (thumbnailLocalPath) {
+            fs.unlinkSync(thumbnailLocalPath);
+        }
+        console.log("Video is required");
         return res
             .status(400)
-            .json(new ApiResponse(400, {}, "Video is required"))
+            .json(new ApiResponse(400, {}, "Video is required"));
     }
+
     if (!thumbnailLocalPath) {
-        if (VideoLocalPath)
-            fs.unlinkSync(VideoLocalPath)
+        if (VideoLocalPath) {
+            fs.unlinkSync(VideoLocalPath);
+        }
         console.log("Thumbnail is required");
         return res
             .status(400)
-            .json(new ApiResponse(400, {}, "Thumbnail is required"))
+            .json(new ApiResponse(400, {}, "Thumbnail is required"));
     }
 
-    const VideoUpload = await uploadOnCloudinary(VideoLocalPath)
-    const videoFile = VideoUpload?.url
-    const duration = VideoUpload?.duration
-    const video_public_id = VideoUpload?.public_id
-    if ((!videoFile) || (!duration) || (!video_public_id)) {
-        console.log("Error while uploading video on Cloudinary")
+    const VideoUpload = await uploadOnCloudinary(VideoLocalPath);
+    const videoFile = VideoUpload?.url;
+    const duration = VideoUpload?.duration;
+    const video_public_id = VideoUpload?.public_id;
+    
+    if (!videoFile || !duration || !video_public_id) {
+        console.log("Error while uploading video on Cloudinary");
         return res
             .status(500)
-            .json(new ApiResponse(500, {}, "Error while uploaing video on cloudinary"))
+            .json(new ApiResponse(500, {}, "Error while uploading video on cloudinary"));
     }
 
-    const uploadthumbnail = await uploadOnCloudinary(thumbnailLocalPath)
-    const thumbnail = uploadthumbnail.url
-    const thumbnail_public_id = uploadthumbnail?.public_id
-    if ((!thumbnail) || (!thumbnail_public_id)) {
-        console.log("Error while uploading thumbnail on Cloudinary")
+    const uploadthumbnail = await uploadOnCloudinary(thumbnailLocalPath);
+    const thumbnail = uploadthumbnail.url;
+    const thumbnail_public_id = uploadthumbnail?.public_id;
+    
+    if (!thumbnail || !thumbnail_public_id) {
+        console.log("Error while uploading thumbnail on Cloudinary");
         return res
             .status(500)
-            .json(new ApiResponse(500, {}, "Error while uploaing Thumbnail on cloudinary"))
+            .json(new ApiResponse(500, {}, "Error while uploading Thumbnail on cloudinary"));
     }
 
-    const owner = user
+    const owner = user;
     const uploadedVideo = await Video.create({
-        owner, description, title, videoFile, thumbnail, title, description, duration, owner, thumbnail_public_id, video_public_id,
-        isPublished: isPublished === undefined ? true : Boolean(isPublished)
-    })
+        owner,
+        description,
+        title,
+        videoFile,
+        thumbnail,
+        duration,
+        thumbnail_public_id,
+        video_public_id,
+        isPublished: isPublishedValue // Use the processed boolean value
+    });
+
     if (!uploadedVideo) {
-        await deleteFromCloudinary(thumbnail)
-        await deleteFromCloudinary(videoFile)
-        console.log("error while creating documents in mongodb")
+        await deleteFromCloudinary(thumbnail);
+        await deleteFromCloudinary(videoFile);
+        console.log("Error while creating documents in MongoDB");
         return res
             .status(500)
-            .json(new ApiResponse(500, {}, "Internal error while uploading video details"))
-    }
-    else
+            .json(new ApiResponse(500, {}, "Internal error while uploading video details"));
+    } else {
         return res
             .status(200)
-            .json(new ApiResponse(200, uploadedVideo, "Video uploaded successfully"))
-})
+            .json(new ApiResponse(200, uploadedVideo, "Video uploaded successfully"));
+    }
+});
+
 
 
 const getAllVideo = asyncHandler(async (req, res) => {
