@@ -13,14 +13,22 @@ const PublsihVideo = asyncHandler(async (req, res) => {
     const user = req?.user;
     const description = req?.body?.description;
     const title = req?.body?.title;
+    const { isPublished } = req?.body
+
+    console.log(isPublished)
     if (!user) {
         console.log("User Not Signed in to upload video")
-        throw new ApiError(400, "Unauthorised access")
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "Unauthorised Access"))
     }
 
     if (!title || !description) {
+        console.log(title, description)
         console.log("All fields are required")
-        throw new ApiError(400, "All fields are required")
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "All fields are required"))
     }
     let VideoLocalPath;
     // console.log(req.files)
@@ -33,13 +41,17 @@ const PublsihVideo = asyncHandler(async (req, res) => {
         if (thumbnailLocalPath)
             fs.unlinkSync(thumbnailLocalPath)
         console.log("Video is required")
-        throw new ApiError(400, "Video is required")
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "Video is required"))
     }
     if (!thumbnailLocalPath) {
         if (VideoLocalPath)
             fs.unlinkSync(VideoLocalPath)
         console.log("Thumbnail is required");
-        throw new ApiError(400, "Thumbanail is required")
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "Thumbnail is required"))
     }
 
     const VideoUpload = await uploadOnCloudinary(VideoLocalPath)
@@ -48,7 +60,9 @@ const PublsihVideo = asyncHandler(async (req, res) => {
     const video_public_id = VideoUpload?.public_id
     if ((!videoFile) || (!duration) || (!video_public_id)) {
         console.log("Error while uploading video on Cloudinary")
-        throw new ApiError(500, "Error While uploading Video on Clodinary")
+        return res
+            .status(500)
+            .json(new ApiResponse(500, {}, "Error while uploaing video on cloudinary"))
     }
 
     const uploadthumbnail = await uploadOnCloudinary(thumbnailLocalPath)
@@ -56,18 +70,23 @@ const PublsihVideo = asyncHandler(async (req, res) => {
     const thumbnail_public_id = uploadthumbnail?.public_id
     if ((!thumbnail) || (!thumbnail_public_id)) {
         console.log("Error while uploading thumbnail on Cloudinary")
-        throw new ApiError(500, "Error While uploading Thumbnail on Clodinary")
+        return res
+            .status(500)
+            .json(new ApiResponse(500, {}, "Error while uploaing Thumbnail on cloudinary"))
     }
 
     const owner = user
     const uploadedVideo = await Video.create({
-        owner, description, title, videoFile, thumbnail, title, description, duration, owner, thumbnail_public_id, video_public_id
+        owner, description, title, videoFile, thumbnail, title, description, duration, owner, thumbnail_public_id, video_public_id,
+        isPublished: isPublished === undefined ? true : Boolean(isPublished)
     })
     if (!uploadedVideo) {
         await deleteFromCloudinary(thumbnail)
         await deleteFromCloudinary(videoFile)
         console.log("error while creating documents in mongodb")
-        throw new ApiError(500, "Interanal error while uploading video details")
+        return res
+            .status(500)
+            .json(new ApiResponse(500, {}, "Internal error while uploading video details"))
     }
     else
         return res
@@ -90,17 +109,17 @@ const getAllVideo = asyncHandler(async (req, res) => {
             ? { _id: { $gt: new mongoose.Types.ObjectId(lastId) }, isPublished: isPublished }
             : { isPublished: isPublished };
     else
-    matchStage = lastId
-    ? { 
-        _id: { $gt: new mongoose.Types.ObjectId(lastId) },
-        $or: [{ owner: userid }, { isPublished: true }]
-      }
-    : { 
-        $or: [{ owner: userid }, { isPublished: true }] 
-      };
+        matchStage = lastId
+            ? {
+                _id: { $gt: new mongoose.Types.ObjectId(lastId) },
+                $or: [{ owner: userid }, { isPublished: true }]
+            }
+            : {
+                $or: [{ owner: userid }, { isPublished: true }]
+            };
 
 
-    console.log(await Video.findOne({$or:[{owner: userid},{isPublished:true}]}))
+    console.log(await Video.findOne({ $or: [{ owner: userid }, { isPublished: true }] }))
     const allvideos = await Video.aggregate([
         { $match: matchStage },
         {
