@@ -70,7 +70,7 @@ const PublsihVideo = asyncHandler(async (req, res) => {
     const videoFile = VideoUpload?.url;
     const duration = VideoUpload?.duration;
     const video_public_id = VideoUpload?.public_id;
-    
+
     if (!videoFile || !duration || !video_public_id) {
         console.log("Error while uploading video on Cloudinary");
         return res
@@ -81,7 +81,7 @@ const PublsihVideo = asyncHandler(async (req, res) => {
     const uploadthumbnail = await uploadOnCloudinary(thumbnailLocalPath);
     const thumbnail = uploadthumbnail.url;
     const thumbnail_public_id = uploadthumbnail?.public_id;
-    
+
     if (!thumbnail || !thumbnail_public_id) {
         console.log("Error while uploading thumbnail on Cloudinary");
         return res
@@ -195,44 +195,99 @@ const getAllVideo = asyncHandler(async (req, res) => {
 });
 
 const getVideoById = asyncHandler(async (req, res) => {
-    const videoid = new mongoose.Types.ObjectId(req?.params?.videoid)
-    if (!videoid) {
-        throw new ApiError(400, "Invalid video id")
+    const videoid = req?.params?.videoid;
+
+    // Validate if videoid is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(videoid)) {
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "Invalid video id"));
     }
+
+    // Find the video by its id
     const currentVideo = await Video.findById(videoid);
     if (!currentVideo) {
-        throw new ApiError(400, "No such videoId exist")
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "No such videoId exists"));
     }
-    const owner = await User.findById(currentVideo.owner).select("-password -watchHistory -refreshToken")
+
+    // Find the owner of the video
+    const owner = await User.findById(currentVideo.owner).select("-password -watchHistory -refreshToken");
     if (!owner) {
-        throw new ApiError(500, "something went wrong")
+        return res
+            .status(500)
+            .json(new ApiResponse(500, {}, "Something went wrong while fetching the owner details"));
     }
+
+    // Successfully return the video and its owner
     return res
         .status(200)
-        .json(new ApiResponse(200, { currentVideo, owner }, "Video got successfully"))
+        .json(new ApiResponse(200, { currentVideo, owner }, "Video retrieved successfully"));
 });
+
+const getVideoDetaisbyVideo_public_id = asyncHandler(async (req, res) => {
+    const { video_public_id } = req?.params
+    if (!video_public_id)
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "Invalid video Public id"))
+    const video = await Video.findOne({ video_public_id })
+    if (!video)
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "No such video found"))
+    return res
+        .status(200)
+        .json(new ApiResponse(200, video, "Video successfully found"))
+})
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const user = req?.user;
+    
+    // Check if user is authenticated
     if (!user) {
-        throw new ApiError(400, "Unauthorised access!! Please Login")
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "Unauthorized access!! Please login"));
     }
-    const videoid = new mongoose.Types.ObjectId(req?.params?.videoid)
-    if (!videoid) {
-        throw new ApiError(500, "Something went Wrong")
+
+    // Validate video ID
+    const videoid = req?.params?.videoid;
+    if (!mongoose.Types.ObjectId.isValid(videoid)) {
+        return res
+            .status(400)
+            .json(new ApiResponse(400, {}, "Invalid video ID"));
     }
+
+    // Find the video by its ID
     const currentVideo = await Video.findById(videoid);
+    if (!currentVideo) {
+        return res
+            .status(404)
+            .json(new ApiResponse(404, {}, "Video not found"));
+    }
+
+    // Check if the authenticated user owns the video
     if (!user._id.equals(currentVideo.owner)) {
-        throw new ApiError(400, "Unauthorised access!!")
+        return res
+            .status(403)
+            .json(new ApiResponse(403, {}, "Unauthorized access"));
     }
-    const deletevideo = await Video.deleteOne(videoid)
-    if (!deletevideo) {
-        throw new ApiError(500, "Couldn't delete Video please try again")
+
+    // Delete the video
+    const deleteResult = await Video.deleteOne({ _id: videoid });
+    if (deleteResult.deletedCount === 0) {
+        return res
+            .status(500)
+            .json(new ApiResponse(500, {}, "Couldn't delete video. Please try again"));
     }
+
     return res
         .status(200)
-        .json(new ApiResponse(200, {}, "Video deleted successfully"))
-})
+        .json(new ApiResponse(200, {}, "Video deleted successfully"));
+});
+
 
 const updateVideoDetails = asyncHandler(async (req, res) => {
     const user = req?.user;
@@ -292,4 +347,4 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, updateVideoDetails, "Publish status updated successfully"))
 })
 
-export { PublsihVideo, getAllVideo, getVideoById, deleteVideo, updateVideoDetails, togglePublishStatus }
+export { PublsihVideo, getAllVideo, getVideoById, deleteVideo, updateVideoDetails, togglePublishStatus, getVideoDetaisbyVideo_public_id }
