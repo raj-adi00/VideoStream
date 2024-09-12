@@ -7,6 +7,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import fs from "fs"
 import { serialize } from "v8";
 import { User } from "../models/user.model.js";
+import { title } from "process";
 
 
 const PublsihVideo = asyncHandler(async (req, res) => {
@@ -227,20 +228,46 @@ const getVideoById = asyncHandler(async (req, res) => {
 });
 
 const getVideoDetaisbyVideo_public_id = asyncHandler(async (req, res) => {
-    const { video_public_id } = req?.params
-    if (!video_public_id)
-        return res
-            .status(400)
-            .json(new ApiResponse(400, {}, "Invalid video Public id"))
-    const video = await Video.findOne({ video_public_id })
-    if (!video)
-        return res
-            .status(400)
-            .json(new ApiResponse(400, {}, "No such video found"))
-    return res
-        .status(200)
-        .json(new ApiResponse(200, video, "Video successfully found"))
-})
+    const { video_public_id } = req?.params;
+    
+    // Validate if video_public_id is provided
+    if (!video_public_id) {
+        return res.status(400).json(new ApiResponse(400, {}, "Invalid video Public ID"));
+    }
+
+    // Find the video by video_public_id
+    const video = await Video.aggregate([
+        {
+            $match: { video_public_id }
+        },
+        {
+            $lookup: {
+                from: 'users',
+                localField: 'owner',
+                foreignField: '_id',
+                as: 'video_owner'
+            }
+        },
+        {
+            $project: {
+                owner: 1,
+                video_owner: 1,
+                createdAt: 1,
+                title:1,
+                description:1,
+                isPublished:1
+            }
+        }
+    ]);
+
+    // Check if the video exists
+    if (!video || video.length === 0) {
+        return res.status(400).json(new ApiResponse(400, {}, "No such video found"));
+    }
+
+    // Successfully found the video, return the details
+    return res.status(200).json(new ApiResponse(200, video[0], "Video successfully found"));
+});
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const user = req?.user;
