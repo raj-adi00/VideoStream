@@ -244,7 +244,7 @@ const getVideoDetaisbyVideo_public_id = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
     const user = req?.user;
-    
+
     // Check if user is authenticated
     if (!user) {
         return res
@@ -291,37 +291,56 @@ const deleteVideo = asyncHandler(async (req, res) => {
 
 const updateVideoDetails = asyncHandler(async (req, res) => {
     const user = req?.user;
-    let title = req.body.title;
-    let description = req.body?.description
+    let { title, description } = req.body;
+
+    // Check if user is authenticated
     if (!user) {
-        throw new ApiError(400, "Unauthorised Access")
+        return res.status(400).json(new ApiResponse(400, {}, "Unauthorized Access"));
     }
-    const videoid = new mongoose.Types.ObjectId(req?.params?.videoid);
+
+    // Extract video ID from the request parameters
+    const videoid = req?.params?.videoid;
+
+    // Check if the video ID is valid
+    if (!mongoose.Types.ObjectId.isValid(videoid)) {
+        return res.status(400).json(new ApiResponse(400, {}, "Invalid video ID"));
+    }
+
+    // Find the current video
     const currentVideo = await Video.findById(videoid);
+    if (!currentVideo) {
+        return res.status(404).json(new ApiResponse(404, {}, "Video not found"));
+    }
+
+    // Check if the current user is the owner of the video
     if (!currentVideo.owner.equals(user._id)) {
-        throw new ApiError(400, "Only video owner can updae details")
+        return res.status(403).json(new ApiResponse(403, {}, "Only the video owner can update details"));
     }
-    // console.log(title)
+
+    // Ensure that at least one value (title or description) is provided for the update
     if (!title && !description) {
-        throw new ApiError(400, "Please provide details")
+        return res.status(400).json(new ApiResponse(400, {}, "Please provide at least one value to update"));
     }
-    if (!title)
-        title = currentVideo.title
-    if (!description)
-        description = currentVideo.description
-    const updatedDetails = await Video.findByIdAndUpdate(videoid, {
-        $set: {
-            title, description
-        },
-    }, { new: true }
-    )
+
+    // If title or description is not provided, keep the old values
+    title = title || currentVideo.title;
+    description = description || currentVideo.description;
+
+    // Perform the update
+    const updatedDetails = await Video.findByIdAndUpdate(
+        videoid,
+        { $set: { title, description } },
+        { new: true } // Return the updated document
+    );
+
+    // Check if the update was successful
     if (!updatedDetails) {
-        throw new ApiError(500, "Something went wreong while updating document")
+        return res.status(500).json(new ApiResponse(500, {}, "Something went wrong while updating details"));
     }
-    return res.
-        status(200)
-        .json(new ApiResponse(200, updatedDetails, "Details updated successfully"))
-})
+
+    // Respond with success
+    return res.status(200).json(new ApiResponse(200, updatedDetails, "Details updated successfully"));
+});
 
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
