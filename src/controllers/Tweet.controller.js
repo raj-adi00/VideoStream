@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { Tweet } from "../models/tweet.model.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { User } from "../models/user.model.js";
 
 
 const createTweet = asyncHandler(async (req, res) => {
@@ -55,10 +56,27 @@ const getAllTweet = asyncHandler(async (req, res) => {
                 .status(500)
                 .json(new ApiResponse(500, {}, "Internal Server error. cannot get tweets"))
         }
-        // console.log(alltweets)
-        return res
-            .status(200)
-            .json(new ApiResponse(200, alltweets, "Tweets fetched Successfully"))
+        const updatedTweets = await Promise.all(
+            alltweets.map(async (individualTweet) => {
+                const ownerOfTweet = await User.findById(individualTweet.owner);
+                if (!ownerOfTweet) {
+                    return res.status(500).json(new ApiResponse(500, {}, "Internal Server Error. Cannot get tweets"));
+                }
+                // Convert Mongoose documents to plain objects
+                const tweetObject = individualTweet.toObject();
+                const ownerObject = ownerOfTweet.toObject();
+                return { ...tweetObject, owner_details: { ...ownerObject } };
+            })
+        );
+        if (updateTweet)
+            return res
+                .status(200)
+                .json(new ApiResponse(200, updatedTweets, "Tweets fetched successfully"));
+        else
+            return res
+                .status(500)
+                .json(new ApiResponse(500, {}, "Internal Server error. cannot get tweets"))
+
     } catch (error) {
         console.log("error while fetching all the tweets", error)
         return res
@@ -143,8 +161,8 @@ const deleteTweet = asyncHandler(async (req, res) => {
                 .json(new ApiResponse(404, {}, "No such tweet exists"));
         }
 
-        const tweetOwnerId =new mongoose.Types.ObjectId(targetTweet.owner);
-        const userId =new mongoose.Types.ObjectId(owner._id);
+        const tweetOwnerId = new mongoose.Types.ObjectId(targetTweet.owner);
+        const userId = new mongoose.Types.ObjectId(owner._id);
 
         if (!userId.equals(tweetOwnerId)) {
             console.log("Unauthorized access");
@@ -161,7 +179,7 @@ const deleteTweet = asyncHandler(async (req, res) => {
                 .status(500)
                 .json(new ApiResponse(500, {}, "Couldn't delete the tweet"));
         }
-      
+
         return res
             .status(200)
             .json(new ApiResponse(200, {}, "Tweet deleted successfully"));
