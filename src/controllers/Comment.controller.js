@@ -36,13 +36,16 @@ const createComment = asyncHandler(async (req, res) => {
             .status(404)
             .json(new ApiResponse(404, {}, "Video not available"))
     }
-    const CommentAtDatabase = await Comment.create({ content: comment, owner: user, video: CommentedVideo })
+    let CommentAtDatabase = await Comment.create({ content: comment, owner: user, video: CommentedVideo })
     if (!CommentAtDatabase) {
         console.log("Internal Server Error at createComment")
         return res
             .status(500)
             .json(new ApiResponse(500, {}, "Internal Server error"))
     }
+    CommentAtDatabase = { ...CommentAtDatabase._doc, owner: [{ ...user._doc }], editable: true, video: videoObjectID }
+    
+    console.log(CommentAtDatabase)
     return res
         .status(200)
         .json(new ApiResponse(200, CommentAtDatabase, "Comment Created successfully!!"))
@@ -130,11 +133,13 @@ const GetAllComment = asyncHandler(async (req, res) => {
     const videoID = new mongoose.Types.ObjectId(videoid)
     const { userLoggedIn } = req
     if (!userLoggedIn) {
-        const CommentOnVideo = await Comment.aggregate().match({ video: videoid }).lookup({
+        const CommentOnVideo = await Comment.aggregate().match({ video: videoID }).lookup({
             from: "users",
             localField: "owner",
             foreignField: "_id",
             as: "owner"
+        }).addFields({
+            editable: false
         })
         if (!CommentOnVideo) {
             return res
@@ -146,6 +151,7 @@ const GetAllComment = asyncHandler(async (req, res) => {
             .json(new ApiResponse(200, CommentOnVideo, "Comment Fetched successfully"))
     }
     const userID = req?.user?._id
+    // console.log(userID)
     if (!userID) {
         return res
             .status(500)
@@ -159,7 +165,7 @@ const GetAllComment = asyncHandler(async (req, res) => {
     }).addFields({
         editable: {
             $cond: {
-                if: { $eq: ["$owner._id", new mongoose.Types.ObjectId(userID)] },
+                if: { $eq: [{ $arrayElemAt: ["$owner._id", 0] }, userID] },
                 then: true,
                 else: false
             }
