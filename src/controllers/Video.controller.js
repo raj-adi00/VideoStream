@@ -121,21 +121,27 @@ const PublsihVideo = asyncHandler(async (req, res) => {
 
 const getAllVideo = asyncHandler(async (req, res) => {
     const lastId = req.query.searchAfter;  // The _id of the last document from the previous page, passed as a query parameter   GET /api/videos?searchAfter=lastDocumentId
-    const limit = 10;
+    const limit = 2;
     let { isPublished } = req.query
     const userid = new mongoose.Types.ObjectId(req.query.username)
+    const totalDocument = await Video.countDocuments({});
+    const totalPage = Math.ceil(totalDocument / limit);
+
     // console.log(req.query)
     isPublished = isPublished === 'true'
-    console.log(typeof isPublished, isPublished)
+    // console.log(typeof isPublished, isPublished)
     let matchStage
     if (isPublished)
         matchStage = lastId
-            ? { _id: { $gt: new mongoose.Types.ObjectId(lastId) }, isPublished: isPublished }
+            ? {
+                // _id: { $gt: new mongoose.Types.ObjectId(lastId) }, 
+                isPublished: isPublished
+            }
             : { isPublished: isPublished };
     else
         matchStage = lastId
             ? {
-                _id: { $gt: new mongoose.Types.ObjectId(lastId) },
+                // _id: { $gt: new mongoose.Types.ObjectId(lastId) },
                 $or: [{ owner: userid }, { isPublished: true }]
             }
             : {
@@ -143,8 +149,8 @@ const getAllVideo = asyncHandler(async (req, res) => {
             };
 
 
-    console.log(await Video.findOne({ $or: [{ owner: userid }, { isPublished: true }] }))
-    const allvideos = await Video.aggregate([
+    // console.log(await Video.findOne({ $or: [{ owner: userid }, { isPublished: true }] }))
+    let allvideos = await Video.aggregate([
         { $match: matchStage },
         {
             $lookup: {
@@ -154,7 +160,7 @@ const getAllVideo = asyncHandler(async (req, res) => {
                 as: "channel_owner"
             }
         },
-        { $limit: limit },
+        // { $limit: limit },
         {
             $project: {
                 videoFile: 1,
@@ -176,14 +182,15 @@ const getAllVideo = asyncHandler(async (req, res) => {
             }
         }
     ]);
-    console.log("videos fetched succesfully")
+    allvideos = allvideos.slice((lastId - 1) * limit, lastId * limit);
+    // console.log("videos fetched succesfully")
     // console.log(allvideos)
     if (allvideos) {
         const searchAfter = allvideos.length > 0 ? allvideos[allvideos.length - 1]._id : null;
         if (searchAfter)
             return res
                 .status(200)
-                .json(new ApiResponse(200, { videos: allvideos, searchAfter }, "Videos fetched successfully"));
+                .json(new ApiResponse(200, { videos: allvideos, searchAfter, totalPage }, "Videos fetched successfully"));
         else
             return res
                 .status(201)
@@ -229,7 +236,7 @@ const getVideoById = asyncHandler(async (req, res) => {
 
 const getVideoDetaisbyVideo_public_id = asyncHandler(async (req, res) => {
     const { video_public_id } = req?.params;
-    
+
     // Validate if video_public_id is provided
     if (!video_public_id) {
         return res.status(400).json(new ApiResponse(400, {}, "Invalid video Public ID"));
@@ -253,9 +260,9 @@ const getVideoDetaisbyVideo_public_id = asyncHandler(async (req, res) => {
                 owner: 1,
                 video_owner: 1,
                 createdAt: 1,
-                title:1,
-                description:1,
-                isPublished:1
+                title: 1,
+                description: 1,
+                isPublished: 1
             }
         }
     ]);
