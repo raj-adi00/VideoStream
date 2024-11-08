@@ -7,6 +7,7 @@ import fs from "fs"
 import jwt from "jsonwebtoken"
 import mongoose, { mongo } from "mongoose";
 import { json } from "express";
+import sendMail from "../utils/SendMail.js";
 
 const generateAccessAndRefreshToken = async (userId) => {
     try {
@@ -107,6 +108,10 @@ const registerUser = asyncHandler(async (req, res) => {
             .status(500)
             .json(new ApiResponse(500, {}, "Something went wrong while registering the user"))
     }
+    const to = createdUser.email
+    const subject = 'Account successfully created on video Stream'
+    const text = `Dear ${createdUser.fullname}, You have been successfully registered on VideoStream. Thank You for using Our website`
+    sendMail(subject, text, to)
     return res.status(201).json(
         new ApiResponse(200, createdUser, "USer registered successfully")
     )

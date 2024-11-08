@@ -8,6 +8,7 @@ import fs from "fs"
 import { serialize } from "v8";
 import { User } from "../models/user.model.js";
 import { title } from "process";
+import sendMail from "../utils/SendMail.js";
 
 
 const PublsihVideo = asyncHandler(async (req, res) => {
@@ -110,18 +111,22 @@ const PublsihVideo = asyncHandler(async (req, res) => {
         return res
             .status(500)
             .json(new ApiResponse(500, {}, "Internal error while uploading video details"));
-    } else {
-        return res
-            .status(200)
-            .json(new ApiResponse(200, uploadedVideo, "Video uploaded successfully"));
     }
+    const to = user.email
+    const subject = 'Video uploaded on video Stream'
+    const text = `Dear ${user.fullname}, You have uploaded video ${uploadedVideo?.title} on Videostream. Thank You for using Our website`
+    sendMail(subject, text, to)
+    return res
+        .status(200)
+        .json(new ApiResponse(200, uploadedVideo, "Video uploaded successfully"));
+
 });
 
 
 
 const getAllVideo = asyncHandler(async (req, res) => {
-    const lastId = req.query.searchAfter;  // The _id of the last document from the previous page, passed as a query parameter   GET /api/videos?searchAfter=lastDocumentId
-    const limit = 2;
+    const lastId = req.query.searchAfter;
+    const limit = 10;
     let { isPublished } = req.query
     const userid = new mongoose.Types.ObjectId(req.query.username)
     const totalDocument = await Video.countDocuments({});
