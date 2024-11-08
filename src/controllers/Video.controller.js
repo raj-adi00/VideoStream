@@ -405,4 +405,41 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, updateVideoDetails, "Publish status updated successfully"))
 })
 
-export { PublsihVideo, getAllVideo, getVideoById, deleteVideo, updateVideoDetails, togglePublishStatus, getVideoDetaisbyVideo_public_id }
+const updateViewCount = asyncHandler(async (req, res) => {
+    let { videoid } = req.params; 
+    if (!videoid)
+        return res.status(400).json(new ApiResponse(400, {}, "Invalid videoid"));
+
+    try {
+        videoid = new mongoose.Types.ObjectId(videoid); // Correctly assign videoid as ObjectId
+    } catch (error) {
+        return res.status(400).json(new ApiResponse(400, {}, "Invalid videoid format"));
+    }
+
+    try {
+        const video = await Video.findById(videoid);
+        if (!video)
+            return res.status(400).json(new ApiResponse(400, {}, "Video doesn't exist"));
+
+        // Update the view count
+        const updatedViewCountvideo = await Video.findByIdAndUpdate(
+            videoid,
+            {
+                $inc: { views: 1 } // Use $inc for incrementing the views by 1
+            },
+            {
+                new: true
+            }
+        );
+
+        if (!updatedViewCountvideo)
+            return res.status(500).json(new ApiResponse(500, {}, "Internal server error"));
+
+        return res.status(200).json(new ApiResponse(200, updatedViewCountvideo, "View Count Updated Successfully"));
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json(new ApiResponse(500, {}, "Internal server Error"));
+    }
+});
+
+export { PublsihVideo, getAllVideo, getVideoById, deleteVideo, updateVideoDetails, togglePublishStatus, getVideoDetaisbyVideo_public_id, updateViewCount }
