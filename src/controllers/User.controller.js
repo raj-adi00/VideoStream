@@ -3,7 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import fs from "fs"
+import fs, { watch } from "fs"
 import jwt from "jsonwebtoken"
 import mongoose, { mongo } from "mongoose";
 import { json } from "express";
@@ -339,7 +339,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         .json(new ApiResponse(200, user, "Cover Image updated successfully"))
 })
 
-const getUserChannelProfile = asyncHandler(async (req, res) => {
+const getUserChannelProfile = asyncHandler(async (req, res, next) => {
     const { username } = req.params
     if (!username?.trim()) {
         throw new ApiError(400, "username is missing")
@@ -395,18 +395,27 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         }
     ])
     if (!channel?.length) {
-        throw new ApiError(404, "Channel does not exist")
+        return res.status(404).json(new ApiResponse(404, {}, "Channel doesn't exist"))
     }
-    return res
-        .status(200)
-        .json(new ApiResponse(200, channel[0], "User channel fetched successfully"))
+
+    req.channel = channel[0]
+    return next()
 })
 
 const getWatchHistory = asyncHandler(async (req, res) => {
+    const { channel } = req
+    const { userLoggedIn } = req
+    const LoggedInUser = req.user
+    const userid = channel._id
+    let response = { channel }
+    if (!userid.equals(LoggedInUser._id) || (!userLoggedIn))
+        return res.status(200).json(new ApiResponse(200, response, "User channel fetched Successfully"))
+
+
     const user = await User.aggregate([
         {
             $match: {
-                _id: new mongoose.Types.ObjectId(req.user._id)
+                _id: new mongoose.Types.ObjectId(userid)
             }
         },
         {
@@ -442,9 +451,10 @@ const getWatchHistory = asyncHandler(async (req, res) => {
             }
         }
     ])
-    return res
-        .status(200)
-        .json(new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully"))
+    if (!user || user.length == 0)
+        return res.status(200).json(new ApiResponse(200, response, "User channel fetched Successfully"))
+    response = { ...response, watchHistory: user[0].watchHistory }
+    return res.status(200).json(new ApiResponse(200, response, "User channel fetched Successfully"))
 })
 
 const updateWatchHistory = asyncHandler(async (req, res) => {
@@ -460,11 +470,11 @@ const updateWatchHistory = asyncHandler(async (req, res) => {
     const { user } = req
     const history = user.watchHistory
     history.push(videoid)
-    const userid=new mongoose.Types.ObjectId(user._id)
+    const userid = new mongoose.Types.ObjectId(user._id)
     try {
         const updateStatus = await User.findByIdAndUpdate(userid, {
-            watchHistory:history
-        },{new:true})
+            watchHistory: history
+        }, { new: true })
         if (!updateStatus)
             return res.status(500).json(new ApiResponse(500, {}, "Something went wrong"))
         return res.status(200).json(new ApiResponse(200, updateStatus, "Successfully updated watch history"))
@@ -473,4 +483,4 @@ const updateWatchHistory = asyncHandler(async (req, res) => {
         return res.status(500).json(new ApiResponse(500, {}, "Something went wrong"))
     }
 })
-export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory,updateWatchHistory }
+export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory, updateWatchHistory }
