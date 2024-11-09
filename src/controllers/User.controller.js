@@ -458,7 +458,7 @@ const updateWatchHistory = asyncHandler(async (req, res) => {
     if (!userLoggedIn)
         return res.status(404).json(new ApiResponse(404, {}, "Unauthorised Access"))
     const { user } = req
-    const history = req.watchHistory || []
+    const history = user.watchHistory
     history.push(videoid)
     const userid=new mongoose.Types.ObjectId(user._id)
     try {
