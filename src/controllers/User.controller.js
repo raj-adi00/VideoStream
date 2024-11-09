@@ -446,4 +446,31 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully"))
 })
-export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory }
+
+const updateWatchHistory = asyncHandler(async (req, res) => {
+    let { videoid } = req.params
+    if (!videoid)
+        return res.status(400).json(new ApiResponse(400, {}, "Invalid Video id"))
+    videoid = new mongoose.Types.ObjectId(videoid)
+    if (!videoid)
+        return res.status(400).json(new ApiResponse(400, {}, "Invalid Video id"))
+    const { userLoggedIn } = req
+    if (!userLoggedIn)
+        return res.status(404).json(new ApiResponse(404, {}, "Unauthorised Access"))
+    const { user } = req
+    const history = req.watchHistory || []
+    history.push(videoid)
+    const userid=new mongoose.Types.ObjectId(user._id)
+    try {
+        const updateStatus = await User.findByIdAndUpdate(userid, {
+            watchHistory:history
+        },{new:true})
+        if (!updateStatus)
+            return res.status(500).json(new ApiResponse(500, {}, "Something went wrong"))
+        return res.status(200).json(new ApiResponse(200, updateStatus, "Successfully updated watch history"))
+    } catch (error) {
+        console.log(error)
+        return res.status(500).json(new ApiResponse(500, {}, "Something went wrong"))
+    }
+})
+export { registerUser, loginUser, logoutUser, refreshAccessToken, changeCurrentPassword, getCurrentUser, updateAccountDetails, updateUserAvatar, updateUserCoverImage, getUserChannelProfile, getWatchHistory,updateWatchHistory }

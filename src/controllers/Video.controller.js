@@ -129,8 +129,7 @@ const getAllVideo = asyncHandler(async (req, res) => {
     const limit = 10;
     let { isPublished } = req.query
     const userid = new mongoose.Types.ObjectId(req.query.username)
-    const totalDocument = await Video.countDocuments({});
-    const totalPage = Math.ceil(totalDocument / limit);
+
 
     // console.log(req.query)
     isPublished = isPublished === 'true'
@@ -187,9 +186,11 @@ const getAllVideo = asyncHandler(async (req, res) => {
             }
         }
     ]);
+    const totalDocument = allvideos.length;
     allvideos = allvideos.slice((lastId - 1) * limit, lastId * limit);
     // console.log("videos fetched succesfully")
     // console.log(allvideos)
+    const totalPage = Math.ceil(totalDocument / limit);
     if (allvideos) {
         const searchAfter = allvideos.length > 0 ? allvideos[allvideos.length - 1]._id : null;
         if (searchAfter)
@@ -267,7 +268,8 @@ const getVideoDetaisbyVideo_public_id = asyncHandler(async (req, res) => {
                 createdAt: 1,
                 title: 1,
                 description: 1,
-                isPublished: 1
+                isPublished: 1,
+                views: 1
             }
         }
     ]);
@@ -406,7 +408,7 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
 })
 
 const updateViewCount = asyncHandler(async (req, res) => {
-    let { videoid } = req.params; 
+    let { videoid } = req.params;
     if (!videoid)
         return res.status(400).json(new ApiResponse(400, {}, "Invalid videoid"));
 
