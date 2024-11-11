@@ -12,6 +12,10 @@ const server = http.createServer(app);
 
 const io = new SocketIOServer(server);
 
+app.get('/', (req, res) => {
+    res.send('Hello, world!');
+});
+
 app.use(cors({
     origin: process.env.CORS_ORIGIN,
     credentials: true
