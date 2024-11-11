@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
-import { app, io, server } from './app.js'; // Import server from app.js
+import app, { io, server } from './app.js';
+// Import server from app.js
 import connectDB from './db/index.js';
 import setupSocketHandlers from './SocketWeb/SocketServer.js'
 

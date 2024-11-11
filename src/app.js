@@ -32,4 +32,5 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1/videos", videoRouter);
 app.use("/api/v1/tweet", tweetRouter);
 app.use("/api/v1/comments", commentRouter)
-export { app, server, io };
+export {  server, io };
+export default app
