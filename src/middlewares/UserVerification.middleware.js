@@ -15,7 +15,6 @@ export const UserVerification = asyncHandler(async (req, res, next) => {
 
         if (!user) {
             req.userLoggedIn = false;
-            return res.status(500).json(new ApiResponse(500,{},"afh"));
             return next();
         }
 
