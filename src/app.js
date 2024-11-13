@@ -9,9 +9,6 @@ import { Server as SocketIOServer } from "socket.io";
 const app = express();
 const server = http.createServer(app);
 
-app.get('/', (req, res) => {
-    res.send("hello")
-})
 const io = new SocketIOServer(server);
 
 
@@ -19,6 +16,10 @@ app.use(cors({
     origin: "https://itube-play.netlify.app",
     credentials: true
 }));
+// app.use(cors({
+//     origin: "http://localhost:5173",
+//     credentials: true
+// }));
 app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "20kb" }));
 app.use(express.static("Public"));
