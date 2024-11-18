@@ -1,23 +1,32 @@
-export default (io) => {
-    // Create a namespace '/chat'
-    const chatNamespace = io.of("/chat");
+const setupSocketIo = (io) => {
+  const onlineUsers = {};
+  io.on("connection", (socket) => {
+    console.log(`User Connected ${socket.id}`);
 
-    chatNamespace.on("connection", function (socket) {
-        console.log("Socket connected to /chat namespace");
-
-        socket.on("joinRoom", (roomid) => {
-            socket.join(roomid);
-            console.log("User joined room", roomid);
-        });
-
-        socket.on("sendMessage", (data) => {
-            console.log("Received message: ", data);
-            // Broadcast message to the room
-            chatNamespace.to(data.roomId).emit("newMessage", data.message);
-        });
-
-        socket.on("disconnect", () => {
-            console.log("Socket disconnected from /chat namespace");
-        });
+    socket.on("userOnline", (userId) => {
+      onlineUsers[userId] = socket.id;
+      console.log(`User ${userId} is online`);
     });
+
+    socket.on("sendMessage", ({ senderId, receiverId, message }) => {
+      const receiverSocket = onlineUsers[receiverId];
+      if (receiverSocket) {
+        io.to(receiverSocket).emit("receiveMessage", { senderId, message });
+      } else {
+        console.log(`User ${receiverId} is offline. Message should be saved`);
+        console.log(message)
+      }
+    });
+    socket.on("disconnect", () => {
+      for (const [userId, socketId] of Object.entries(onlineUsers)) {
+        if (socketId === socket.id) {
+          delete onlineUsers[userId];
+          console.log(`User ${userId} went offline.`);
+          break;
+        }
+      }
+    });
+  });
 };
+
+export default setupSocketIo
