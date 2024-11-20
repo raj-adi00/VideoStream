@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
 const MessageSchema = new mongoose.Schema({
   senderId: {
@@ -16,4 +16,4 @@ const MessageSchema = new mongoose.Schema({
   isRead: { type: Boolean, default: false },
 });
 
-export default mongoose.model("Message", MessageSchema);
+export const Message = mongoose.model("Message", MessageSchema);

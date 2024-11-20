@@ -8,31 +8,22 @@ import { Server as SocketIOServer } from "socket.io";
 const app = express();
 const server = http.createServer(app);
 
-const io = new SocketIOServer(server,{
-    cors: {
-      origin: ["https://itube-play.netlify.app", "http://localhost:5173"],
-      credentials: true,
-    },
-  });
+const io = new SocketIOServer(server, {
+  cors: {
+    origin: ["https://itube-play.netlify.app", "http://localhost:5173"],
+    credentials: true,
+  },
+});
 
-// app.use(cors({
-//     origin: "https://itube-play.netlify.app",
-//     credentials: true
-// }));
-// app.use(cors({
-//     origin: "http://localhost:5173",
-//     credentials: true
-// }));
 const allowedOrigins = [
   "https://itube-play.netlify.app",
   "http://localhost:5173",
 ];
 
-setupSocketIo(io)
+setupSocketIo(io);
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
@@ -54,13 +45,13 @@ import videoRouter from "./routes/Video.routes.js";
 import tweetRouter from "./routes/Tweet.routes.js";
 import commentRouter from "./routes/Comment.routes.js";
 import setupSocketIo from "./SocketWeb/SocketServer.js";
-
+import chatRouter from "./routes/Chat.routes.js";
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/videos", videoRouter);
 app.use("/api/v1/tweet", tweetRouter);
 app.use("/api/v1/comments", commentRouter);
-
+app.use("/api/v1/chat", chatRouter);
 
 export { server, io };
 export default app;
