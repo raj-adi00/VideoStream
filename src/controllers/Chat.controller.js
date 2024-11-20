@@ -175,7 +175,7 @@ const GetAllUserChat = asyncHandler(async (req, res) => {
       },
       {
         $project: {
-          _id: 0,
+          _id: 1,
           friendId: "$friendDetails._id",
           friendName: "$friendDetails.fullname",
           friendEmail: "$friendDetails.email",
