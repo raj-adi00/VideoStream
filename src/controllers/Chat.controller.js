@@ -201,15 +201,15 @@ const GetAllUserChat = asyncHandler(async (req, res) => {
 
 const saveMessage = asyncHandler(async (req, res) => {
   const { user } = req;
-  const { message, receiverId } = req.query;
+  const { message, receiverId, senderId } = req.query;
 
   if (!user)
     return res
       .status(401)
       .json(new ApiResponse(401, {}, "Unauthorized access"));
 
-  const senderId = user._id;
-
+  if (senderId != user._id)
+    return res.status(400).json(new ApiResponse(400, {}, "Invalid User"));
   if (!receiverId)
     return res
       .status(400)
@@ -255,6 +255,5 @@ const saveMessage = asyncHandler(async (req, res) => {
       .json(new ApiResponse(500, {}, "Internal Server error"));
   }
 });
-
 
 export { GetAllNonFriendUsers, AddFreinds, GetAllUserChat, saveMessage };
