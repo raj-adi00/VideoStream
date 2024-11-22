@@ -7,14 +7,16 @@ const setupSocketIo = (io) => {
       onlineUsers[userId] = socket.id;
       console.log(`User ${userId} is online`);
     });
-
-    socket.on("sendMessage", ({ senderId, receiverId, message }) => {
+    socket.removeAllListeners("sendMessage");
+    socket.on("sendMessage", ({ senderId, receiverId, message, timestamp }) => {
       const receiverSocket = onlineUsers[receiverId];
       if (receiverSocket) {
-        io.to(receiverSocket).emit("receiveMessage", { senderId, message });
-      } else {
-        console.log(`User ${receiverId} is offline. Message should be saved`);
-        console.log(message)
+        io.to(receiverSocket).emit("receiveMessage", {
+          senderId,
+          message,
+          receiverId,
+          timestamp,
+        });
       }
     });
     socket.on("disconnect", () => {
@@ -29,4 +31,4 @@ const setupSocketIo = (io) => {
   });
 };
 
-export default setupSocketIo
+export default setupSocketIo;
