@@ -10,7 +10,11 @@ const server = http.createServer(app);
 
 const io = new SocketIOServer(server, {
   cors: {
-    origin: ["https://itube-play.netlify.app", "http://localhost:5173"],
+    origin: [
+      "https://itube-play.netlify.app",
+      "http://localhost:5173",
+      "http://localhost",
+    ],
     credentials: true,
   },
 });
@@ -18,6 +22,7 @@ const io = new SocketIOServer(server, {
 const allowedOrigins = [
   "https://itube-play.netlify.app",
   "http://localhost:5173",
+  "http://localhost",
 ];
 
 setupSocketIo(io);
