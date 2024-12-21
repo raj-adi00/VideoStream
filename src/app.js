@@ -51,6 +51,7 @@ import tweetRouter from "./routes/Tweet.routes.js";
 import commentRouter from "./routes/Comment.routes.js";
 import setupSocketIo from "./SocketWeb/SocketServer.js";
 import chatRouter from "./routes/Chat.routes.js";
+import mongoose from "mongoose";
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/videos", videoRouter);
@@ -58,5 +59,28 @@ app.use("/api/v1/tweet", tweetRouter);
 app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/chat", chatRouter);
 
+app.get("/health", async (req, res) => {
+  try {
+    // Check database connection
+    const dbState = mongoose.connection.readyState; // 1 = connected
+    if (dbState !== 1) {
+      return res
+        .status(503)
+        .json({ status: "FAILED", message: "Database not connected" });
+    }
+
+    // Additional checks can go here (e.g., external APIs, Redis, etc.)
+
+    res.status(200).json({ status: "OK", message: "Backend is healthy" });
+  } catch (error) {
+    res
+      .status(500)
+      .json({
+        status: "ERROR",
+        message: "An error occurred",
+        error: error.message,
+      });
+  }
+});
 export { server, io };
 export default app;
